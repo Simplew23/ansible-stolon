@@ -1,0 +1,9 @@
+---
+# Set pg user and replica passwords for stolon
+pg_user: postgres
+pg_user_passwd: postgres
+pg_replica_user: replicator
+pg_replica_passwd: replica
+
+# Database path
+database_path: /var/pgsql/db

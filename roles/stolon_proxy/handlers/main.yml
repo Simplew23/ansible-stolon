@@ -1,0 +1,5 @@
+---
+- name: restart proxy
+  service:
+    name: stolon-proxy
+    state: restarted

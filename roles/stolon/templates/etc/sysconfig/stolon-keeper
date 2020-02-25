@@ -1,0 +1,38 @@
+# /etc/sysconfig/stolon-keeper
+
+# set this to use a deterministic id for this host
+STKEEPER_ID={{ ansible_hostname }}
+
+# default configuration values
+STKEEPER_CLUSTER_NAME={{ stolon_cluster_name }}
+STKEEPER_DATA_DIR={{ database_path }}/pgsql/9.6/data
+STKEEPER_LISTEN_ADDRESS={{ ansible_eth1.ipv4.address }}
+STKEEPER_PORT=5431
+
+# store configuration
+STKEEPER_STORE_BACKEND=consul
+STKEEPER_STORE_ENDPOINTS=127.0.0.1:8500
+
+# set this for debugging
+# STKEEPER_DEBUG=true
+
+# postgres configuration
+STKEEPER_PG_LISTEN_ADDRESS={{ ansible_eth1.ipv4.address }}
+STKEEPER_PG_PORT=25432
+
+# specify postgres binary path if not in $PATH
+STKEEPER_PG_BIN_PATH=/usr/pgsql-9.6/bin
+
+# specify a non default user configuration directory
+# STKEEPER_PG_CONF_DIR=/var/lib/stolon/postgres/conf.d
+
+# these values are required for keeper to instantiate and manage
+# the database and should be identical across the cluster
+STKEEPER_PG_REPL_USERNAME={{ pg_replica_user }}
+STKEEPER_PG_REPL_PASSWORDFILE=/etc/stolon/secrets/pgpass.replication
+STKEEPER_PG_SU_USERNAME={{ pg_user }}
+STKEEPER_PG_SU_PASSWORDFILE=/etc/stolon/secrets/pgpass.postgres
+STKEEPER_PG_BACKUP_FOLDER=/var/pgsql/db/pgsql/9.6/pgbackup
+
+# add any extra command line options to pass the stolon-keeper binary
+EXTRA_OPTS=

@@ -1,0 +1,35 @@
+---
+- include_vars: "{{ item }}"
+  with_first_found:
+   - "../vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version | int}}.yml"
+   - "../vars/{{ ansible_distribution }}.yml"
+   - "../vars/{{ ansible_os_family }}.yml"
+   - "../vars/default.yml"
+  tags:
+   - consul
+
+- name: install latest versions of packages
+  yum:
+    name: "{{ packages_latest }}"
+    state: latest
+    update_cache: true
+  tags:
+   - consul
+
+- name: configure Consul
+  template: 
+    src: consul.json
+    dest: /etc/consul.d/consul.json
+    owner: root
+    group: root
+    mode: 0644
+  tags:
+   - consul
+
+- name: enable and start Consul daemon
+  service:
+    name: consul
+    enabled: yes
+    state: started
+  tags:
+   - consul

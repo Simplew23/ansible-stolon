@@ -1,0 +1,38 @@
+---
+- include_vars: "{{ item }}"
+  with_first_found:
+   - "../vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version | int}}.yml"
+   - "../vars/{{ ansible_distribution }}.yml"
+   - "../vars/{{ ansible_os_family }}.yml"
+   - "../vars/default.yml"
+  tags:
+   - stolon-proxy
+
+- name: install latest versions of packages
+  yum: 
+    name: "{{ packages_latest }}"
+    state: latest
+    update_cache: true
+  tags:
+   - stolon-proxy
+
+- name: configure stolon
+  template:
+    src: etc/{{ item }}
+    dest: /etc/{{ item }}
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+   - sysconfig/stolon-proxy
+  tags:
+   - stolon-proxy
+
+- name: enable and start stolon-proxy daemon
+  service:
+    name: stolon-proxy
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  tags:
+   - stolon-proxy

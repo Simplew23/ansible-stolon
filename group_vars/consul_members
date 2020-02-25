@@ -1,0 +1,4 @@
+---
+consul_members: "{% set members = [] %}{%for host in groups['consul_servers'] %}{%if hostvars[host].ansible_eth1 is defined %}{{members.append(hostvars[host].ansible_eth1.ipv4.address)}}{% endif %}{% endfor %}{{ members|sort()|join('\",\"') }}"
+consul_bootstrap_expect: "{{ consul_bootstrap_count|default([consul_members.split(',') | count -1, 2] | max) }}"
+consul_encrypt: DT1Xz/rUwqnkHDZWKqENKw==

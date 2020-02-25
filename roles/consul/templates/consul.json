@@ -1,0 +1,19 @@
+{
+    "server": {{ consul_server | lower }},
+    "data_dir": "/var/lib/consul",
+    "bind_addr": "{{ ansible_eth1.ipv4.address }}",
+    "retry_join": ["{{ consul_members }}"],
+    "rejoin_after_leave": true,
+    "log_level": "INFO",
+    "disable_update_check": true,
+{% if consul_server %}
+    "bootstrap_expect": {{ consul_bootstrap_expect }},
+    "autopilot": {
+        "cleanup_dead_servers": true,
+        "last_contact_threshold": "200ms",
+        "max_trailing_logs": 250,
+        "server_stabilization_time": "10s"
+    },
+{% endif %}
+    "encrypt": "{{ consul_encrypt }}"
+}

@@ -1,0 +1,174 @@
+---
+- include_vars: "{{ item }}"
+  with_first_found:
+   - "../vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version | int}}.yml"
+   - "../vars/{{ ansible_distribution }}.yml"
+   - "../vars/{{ ansible_os_family }}.yml"
+   - "../vars/default.yml"
+  tags:
+   - stolon
+   - stolon_cluster_update
+
+- name: install latest versions of packages
+  yum: 
+    name: "{{ packages_latest }}"
+    state: latest
+    update_cache: true
+  tags:
+   - stolon
+   - stolon_cluster_update
+
+- name: create directories
+  file:
+    path: "{{ item }}"
+    owner: stolon
+    group: stolon
+    state: directory
+    recurse: yes
+  with_items:
+   - "{{ database_path }}/pgsql/9.6/data"
+   - "{{ database_path }}/pgbackup"
+   - /etc/stolon/secrets
+   - /var/pgsql/log/pg_log
+  tags:
+   - stolon
+   - stolon_cluster_update
+
+- name: Add stolon group
+  ignore_errors: yes
+  group:
+    name: stolon
+    state: present
+
+- name: Add stolon user
+  ignore_errors: yes
+  user:
+    name: stolon
+    shell: /sbin/nologin
+    groups: stolon
+    append: yes
+
+- name: set passwords
+  template:
+    src: etc/stolon/secrets/{{ item }}
+    dest: /etc/stolon/secrets/{{ item }}
+    owner: stolon
+    group: stolon
+    mode: 0600
+  with_items:
+   - pgpass.postgres
+   - pgpass.replication
+  tags:
+   - stolon
+
+- name: configure stolon
+  template:
+    src: etc/{{ item }}
+    dest: /etc/{{ item }}
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+   - sysconfig/stolon-keeper
+   - sysconfig/stolon-sentinel
+  tags:
+   - stolon
+   - stolon_cluster_update
+
+- name: enable and start stolon-sentinel daemon
+  service:
+    name: stolon-sentinel
+    enabled: yes
+    state: started
+  tags:
+   - stolon
+   - stolon_cluster_update
+
+- name: enable and start stolon-keeper daemon
+  service:
+    name: stolon-keeper
+    enabled: yes
+    state: started
+  tags:
+   - stolon
+   - stolon_cluster_update
+
+- name: update stolon cluster config for SDF
+  template:
+    src: etc/{{ item }}
+    dest: /etc/stolon/cluster-config.json
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+   - "stolon/cluster-config.json.{{ platform_type }}"
+  when: "inventory_hostname != 'emsA' and inventory_hostname != 'emsB'"
+  tags:
+   - stolon
+   - stolon_update_cluster_config_only
+   - stolon_cluster_update
+  register: pgsql_config
+
+- name: update stolon cluster config for EMS
+  template:
+    src: etc/{{ item }}
+    dest: /etc/stolon/cluster-config.json
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+   - "stolon/cluster-config.json.ems"
+  when: "inventory_hostname == 'emsA' or inventory_hostname == 'emsB'"
+  tags:
+   - stolon
+   - stolon_update_cluster_config_only
+   - stolon_cluster_update
+  register: pgsql_config
+
+- name: init database cluster (if not yet)
+  shell: stolonctl --store-backend consul --cluster-name {{ stolon_cluster_name }} init -y -f /etc/stolon/cluster-config.json
+  args:
+    creates: "{{ database_path }}/pgsql/9.6/data/postgres/postgresql.conf"
+  run_once: true
+  register: cluster_init
+  tags:
+   - stolon
+
+- name: update cluster configuration (if changed)
+  shell: stolonctl --store-backend consul --cluster-name {{ stolon_cluster_name }} update -f /etc/stolon/cluster-config.json
+  run_once: true
+  when: pgsql_config.changed and not cluster_init.changed
+  tags:
+   - stolon
+   - stolon_cluster_update
+
+- name: wait for PostgreSQL started
+  shell: PGPASSWORD={{ pg_user_passwd }} psql -h {{ ansible_eth1.ipv4.address }} -p25432 -U {{ pg_user }} -c 'select 1 as ready'
+  register: result
+  until: result.stdout.find("ready") != -1
+  retries: 20
+  delay: 10
+  changed_when: False
+  when: not ansible_check_mode
+  tags:
+   - stolon
+
+- name: add zabbix postgresql plugin
+  copy:
+    src: etc/zabbix/zabbix_agentd.d/postgresql.conf
+    dest: /etc/zabbix/zabbix_agentd.d/postgresql.conf
+    owner: root
+    group: root
+    mode: 0644
+  tags:
+   - zabbix_plugins
+
+- name: config pgpass for zabbix
+  template:
+    src: var/lib/zabbix/.pgpass
+    dest: /var/lib/zabbix/.pgpass
+    owner: zabbix
+    group: zabbix
+    mode: 0600
+  tags:
+   - zabbix_plugins

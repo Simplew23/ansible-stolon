@@ -1,0 +1,10 @@
+---
+- name: restart sentinel
+  service:
+    name: stolon-sentinel
+    state: restarted
+
+- name: restart keeper
+  service:
+    name: stolon-keeper
+    state: restarted

@@ -1,0 +1,11 @@
+---
+packages_latest:
+ - postgresql96-libs-9.6.6
+ - postgresql96-contrib-9.6.6
+ - postgresql96-server-9.6.6
+ - postgresql96-9.6.6
+ - stolon-0.13.4
+ - stolon-sentinel-0.13.4
+ - stolon-keeper-0.13.4
+ - python-psycopg2
+ - prefix96-1.2.4

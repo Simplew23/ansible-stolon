@@ -1,0 +1,15 @@
+---
+- hosts: consul_members
+  remote_user: myuser
+  become: yes
+  any_errors_fatal: true
+  roles:
+  - { role: consul, tags: consul }
+
+- hosts: db_servers
+  remote_user: myuser
+  become: yes
+  any_errors_fatal: true
+  roles:
+  - { role: postgresql, tags: postgresql }
+  - { role: stolon_proxy, tags: stolon_proxy }
